@@ -1,62 +1,66 @@
 import { useLocalSearchParams } from 'expo-router';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Car, PenTool as Tool, File as Oil, Battery, Wrench } from 'lucide-react-native';
 
-const services = [
-  {
-    id: 1,
-    title: 'General Service',
-    icon: Car,
-    description: 'Complete car checkup and maintenance',
-    price: 'From $99',
-    image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500',
-  },
-  {
-    id: 2,
-    title: 'Repair Service',
-    icon: Tool,
-    description: 'Fix specific issues with your vehicle',
-    price: 'From $149',
-    image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500',
-  },
-  {
-    id: 3,
-    title: 'Oil Change',
-    icon: Oil,
-    description: 'Professional oil change service',
-    price: 'From $49',
-    image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500',
-  },
-  {
-    id: 4,
-    title: 'Battery Service',
-    icon: Battery,
-    description: 'Battery check and replacement',
-    price: 'From $79',
-    image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500',
-  },
-];
 
 export default function ServiceDetail() {
   const { id } = useLocalSearchParams();
-  const service = services.find((s) => s.id === Number(id));
+  const [service, setService] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!service) {
+  useEffect(() => {
+    const fetchService = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/services/${id}`);
+        const data = await response.json();
+        setService(data);
+      } catch (err) {
+        setError("Failed to load service details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchService();
+  }, [id]);
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Service not found</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
+
+  if (error || !service) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error || "Service not found"}</Text>
+      </View>
+    );
+  }
+
+  // Map icons based on service category (adjust as needed)
+  const iconMap = {
+    "General": Car,
+    "Repair": Wrench,
+    "Oil Change": Oil,
+    "Battery": Battery,
+  };
+
+  const IconComponent = iconMap[service.category] || Car;
 
   return (
     <ScrollView style={styles.container}>
       <Image source={{ uri: service.image }} style={styles.image} />
       <View style={styles.content}>
-        <service.icon size={40} color="#007AFF" />
-        <Text style={styles.title}>{service.title}</Text>
+        {/* <service.icon size={40} color="#007AFF" /> */}
+        <IconComponent size={40} color="#007AFF" />
+        <Text style={styles.title}>{service.name}</Text>
         <Text style={styles.description}>{service.description}</Text>
-        <Text style={styles.price}>{service.price}</Text>
+        <Text style={styles.price}>${service.price}</Text>
         <TouchableOpacity style={styles.bookButton}>
           <Text style={styles.bookText}>Book Now</Text>
         </TouchableOpacity>
@@ -69,6 +73,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
